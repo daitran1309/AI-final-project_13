@@ -28,80 +28,71 @@ class Expectimax(BaseAlgorithm):
         self.max_depth = max_depth or config.ADVERSARIAL_MAX_DEPTH
 
     def solve(self):
-        """
-        Chạy Expectimax.
-        
-        Returns:
-            list[tuple]: Đường đi hoặc [].
-        """
+        """Chạy Expectimax."""
         if not self.problem.is_valid():
             return []
-            
+
         current_grid = self.problem.grid.copy()
         current_pos = self.problem.start
-        
+
         path = [current_pos]
         self.visited.append(current_pos)
-        
+
         limit = 100
         step = 0
-        
+
         while current_pos != self.problem.goal and step < limit:
             step += 1
             state = {'robot_pos': current_pos, 'grid': current_grid}
             robot_actions = self._get_robot_actions(state)
             if not robot_actions:
                 break
-                
+
             best_action = None
             best_val = -float('inf')
-            
+
             for action in robot_actions:
-                next_grid = current_grid.copy()
-                next_state = {'robot_pos': action, 'grid': next_grid}
+                next_state = {'robot_pos': action, 'grid': current_grid}
                 val = self._expectimax(next_state, 1, False)
                 if val > best_val:
                     best_val = val
                     best_action = action
-                    
+
             if best_action is None:
                 break
-                
+
             current_pos = best_action
             path.append(current_pos)
             self.visited.append(current_pos)
-            
+
             if current_pos == self.problem.goal:
                 break
-                
+
             state = {'robot_pos': current_pos, 'grid': current_grid}
             env_actions = self._get_env_actions(state)
             if env_actions:
                 import random
                 chosen_action = random.choice(env_actions)
                 current_grid.set_cell(chosen_action[0], chosen_action[1], config.CELL_WALL)
-                    
+
         return path
 
     def _expectimax(self, state, depth, is_maximizing):
-        """
-        Hàm đệ quy Expectimax.
-        """
+        """Hàm đệ quy Expectimax (Không copy grid)."""
         self.steps += 1
         pos = state['robot_pos']
         grid = state['grid']
-        
+
         if pos == self.problem.goal or depth >= self.max_depth:
             return self._evaluate(state)
-            
+
         if is_maximizing:
             actions = self._get_robot_actions(state)
             if not actions:
                 return -100.0
             max_val = -float('inf')
             for action in actions:
-                next_grid = grid.copy()
-                next_state = {'robot_pos': action, 'grid': next_grid}
+                next_state = {'robot_pos': action, 'grid': grid}
                 val = self._expectimax(next_state, depth + 1, False)
                 max_val = max(max_val, val)
             return max_val
@@ -112,15 +103,17 @@ class Expectimax(BaseAlgorithm):
                 return self._expectimax(next_state, depth + 1, True)
             total_val = 0.0
             for action in actions:
-                next_grid = grid.copy()
-                next_grid.set_cell(action[0], action[1], config.CELL_WALL)
-                next_state = {'robot_pos': pos, 'grid': next_grid}
+                # Kỹ thuật Backtracking: Tạm thời thêm tường -> Tính toán kỳ vọng -> Hoàn tác
+                grid.set_cell(action[0], action[1], config.CELL_WALL)
+                next_state = {'robot_pos': pos, 'grid': grid}
+
                 val = self._expectimax(next_state, depth + 1, True)
+
+                grid.set_cell(action[0], action[1], config.CELL_EMPTY)
                 total_val += val
             return total_val / len(actions)
 
     def _evaluate(self, state):
-        """Hàm đánh giá trạng thái."""
         pos = state['robot_pos']
         goal = self.problem.goal
         if pos == goal:
@@ -145,4 +138,5 @@ class Expectimax(BaseAlgorithm):
                     if grid.get_cell(nr, nc) == config.CELL_EMPTY and (nr, nc) != self.problem.goal:
                         candidates.append((nr, nc))
         candidates.sort(key=lambda p: manhattan_distance(p, (r, c)))
-        return candidates[:3]
+        # Thay thế hardcode bằng cấu hình hệ thống
+        return candidates[:config.ADVERSARIAL_NUM_OBSTACLES]

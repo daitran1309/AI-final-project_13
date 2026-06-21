@@ -24,99 +24,101 @@ class AlphaBeta(BaseAlgorithm):
         self.pruned_count = 0  # Đếm số nhánh bị cắt tỉa
 
     def solve(self):
-        """
-        Chạy Alpha-Beta Pruning.
-        
-        Returns:
-            list[tuple]: Đường đi hoặc [].
-        """
+        """Chạy Alpha-Beta Pruning."""
         if not self.problem.is_valid():
             return []
-            
+
         current_grid = self.problem.grid.copy()
         current_pos = self.problem.start
-        
+
         path = [current_pos]
         self.visited.append(current_pos)
-        
+
         limit = 100
         step = 0
-        
+
         while current_pos != self.problem.goal and step < limit:
             step += 1
             state = {'robot_pos': current_pos, 'grid': current_grid}
             robot_actions = self._get_robot_actions(state)
             if not robot_actions:
                 break
-                
+
             best_action = None
             best_val = -float('inf')
-            
+
+            # SỬA LỖI: Khởi tạo alpha/beta cho vòng lặp gốc của Robot (MAX)
+            alpha = -float('inf')
+            beta = float('inf')
+
             for action in robot_actions:
-                next_grid = current_grid.copy()
-                next_state = {'robot_pos': action, 'grid': next_grid}
-                val = self._alpha_beta(next_state, 1, -float('inf'), float('inf'), False)
+                next_state = {'robot_pos': action, 'grid': current_grid}
+                # Truyền giá trị alpha, beta thực tế đang cập nhật
+                val = self._alpha_beta(next_state, 1, alpha, beta, False)
                 if val > best_val:
                     best_val = val
                     best_action = action
-                    
+                # Cập nhật alpha ngay tại nút gốc để cắt tỉa các nhánh robot phía sau
+                alpha = max(alpha, best_val)
+
             if best_action is None:
                 break
-                
+
             current_pos = best_action
             path.append(current_pos)
             self.visited.append(current_pos)
-            
+
             if current_pos == self.problem.goal:
                 break
-                
+
             state = {'robot_pos': current_pos, 'grid': current_grid}
             env_actions = self._get_env_actions(state)
+
             if env_actions:
                 best_env_action = None
                 best_env_val = float('inf')
+
+                # SỬA LỖI: Khởi tạo alpha/beta cho vòng lặp gốc của Môi trường (MIN)
+                alpha = -float('inf')
+                beta = float('inf')
+
                 for action in env_actions:
-                    next_grid = current_grid.copy()
-                    next_grid.set_cell(action[0], action[1], config.CELL_WALL)
-                    next_state = {'robot_pos': current_pos, 'grid': next_grid}
-                    val = self._alpha_beta(next_state, 1, -float('inf'), float('inf'), True)
+                    # Kỹ thuật Backtracking thay thế cho .copy()
+                    current_grid.set_cell(action[0], action[1], config.CELL_WALL)
+                    next_state = {'robot_pos': current_pos, 'grid': current_grid}
+
+                    # Truyền giá trị alpha, beta thực tế đang cập nhật
+                    val = self._alpha_beta(next_state, 1, alpha, beta, True)
+
+                    current_grid.set_cell(action[0], action[1], config.CELL_EMPTY)
+
                     if val < best_env_val:
                         best_env_val = val
                         best_env_action = action
+                    # Cập nhật beta ngay tại nút gốc để cắt tỉa các nhánh môi trường phía sau
+                    beta = min(beta, best_env_val)
+
                 if best_env_action:
                     current_grid.set_cell(best_env_action[0], best_env_action[1], config.CELL_WALL)
-                    
+
         return path
 
     def _alpha_beta(self, state, depth, alpha, beta, is_maximizing):
-        """
-        Hàm đệ quy Alpha-Beta.
-        
-        Args:
-            state: Trạng thái game.
-            depth (int): Độ sâu hiện tại.
-            alpha (float): Giá trị alpha (best cho MAX).
-            beta (float): Giá trị beta (best cho MIN).
-            is_maximizing (bool): True nếu lượt MAX.
-            
-        Returns:
-            float: Giá trị alpha-beta.
-        """
+        """Hàm đệ quy Alpha-Beta (Không sao chép ma trận)."""
         self.steps += 1
         pos = state['robot_pos']
         grid = state['grid']
-        
+
         if pos == self.problem.goal or depth >= self.max_depth:
             return self._evaluate(state)
-            
+
         if is_maximizing:
             actions = self._get_robot_actions(state)
             if not actions:
                 return -100.0
             max_val = -float('inf')
             for action in actions:
-                next_grid = grid.copy()
-                next_state = {'robot_pos': action, 'grid': next_grid}
+                next_state = {'robot_pos': action, 'grid': grid}
                 val = self._alpha_beta(next_state, depth + 1, alpha, beta, False)
                 max_val = max(max_val, val)
                 alpha = max(alpha, val)
@@ -131,10 +133,13 @@ class AlphaBeta(BaseAlgorithm):
                 return self._alpha_beta(next_state, depth + 1, alpha, beta, True)
             min_val = float('inf')
             for action in actions:
-                next_grid = grid.copy()
-                next_grid.set_cell(action[0], action[1], config.CELL_WALL)
-                next_state = {'robot_pos': pos, 'grid': next_grid}
+                # Kỹ thuật Backtracking & Undo
+                grid.set_cell(action[0], action[1], config.CELL_WALL)
+                next_state = {'robot_pos': pos, 'grid': grid}
+
                 val = self._alpha_beta(next_state, depth + 1, alpha, beta, True)
+
+                grid.set_cell(action[0], action[1], config.CELL_EMPTY)
                 min_val = min(min_val, val)
                 beta = min(beta, val)
                 if alpha >= beta:
@@ -143,7 +148,6 @@ class AlphaBeta(BaseAlgorithm):
             return min_val
 
     def _evaluate(self, state):
-        """Hàm đánh giá trạng thái."""
         pos = state['robot_pos']
         goal = self.problem.goal
         if pos == goal:
@@ -168,10 +172,10 @@ class AlphaBeta(BaseAlgorithm):
                     if grid.get_cell(nr, nc) == config.CELL_EMPTY and (nr, nc) != self.problem.goal:
                         candidates.append((nr, nc))
         candidates.sort(key=lambda p: manhattan_distance(p, (r, c)))
-        return candidates[:3]
+        # Thay thế hardcode bằng cấu hình hệ thống
+        return candidates[:config.ADVERSARIAL_NUM_OBSTACLES]
 
     def get_metrics(self):
-        """Override để thêm số nhánh đã cắt tỉa."""
         metrics = super().get_metrics()
         metrics['pruned_branches'] = self.pruned_count
         return metrics

@@ -26,98 +26,94 @@ class Minimax(BaseAlgorithm):
     """Thuật toán Minimax cho bài toán đối kháng."""
 
     def __init__(self, problem, max_depth=None):
-        """
-        Args:
-            problem (Problem): Bài toán.
-            max_depth (int): Độ sâu tối đa cây game.
-        """
         super().__init__(problem, name="Minimax")
         self.max_depth = max_depth or config.ADVERSARIAL_MAX_DEPTH
 
     def solve(self):
-        """
-        Chạy Minimax để tìm đường đi tốt nhất chống lại môi trường đối kháng.
-        
-        Returns:
-            list[tuple]: Đường đi [(row, col), ...] hoặc [].
-        """
+        """Chạy Minimax để tìm đường đi tốt nhất chống lại môi trường."""
         if not self.problem.is_valid():
             return []
-            
+
         current_grid = self.problem.grid.copy()
         current_pos = self.problem.start
-        
+
         path = [current_pos]
         self.visited.append(current_pos)
-        
+
         limit = 100
         step = 0
-        
+
         while current_pos != self.problem.goal and step < limit:
             step += 1
             state = {'robot_pos': current_pos, 'grid': current_grid}
             robot_actions = self._get_robot_actions(state)
             if not robot_actions:
                 break
-                
+
             best_action = None
             best_val = -float('inf')
-            
+
+            # Robot chọn nước đi tốt nhất (MAX)
             for action in robot_actions:
-                next_grid = current_grid.copy()
-                next_state = {'robot_pos': action, 'grid': next_grid}
+                # Robot di chuyển không làm thay đổi bản đồ -> Không cần sao chép grid
+                next_state = {'robot_pos': action, 'grid': current_grid}
                 val = self._minimax(next_state, 1, False)
                 if val > best_val:
                     best_val = val
                     best_action = action
-                    
+
             if best_action is None:
                 break
-                
+
             current_pos = best_action
             path.append(current_pos)
             self.visited.append(current_pos)
-            
+
             if current_pos == self.problem.goal:
                 break
-                
+
             state = {'robot_pos': current_pos, 'grid': current_grid}
             env_actions = self._get_env_actions(state)
+
+            # Môi trường chọn nước đi cản trở nhất (MIN)
             if env_actions:
                 best_env_action = None
                 best_env_val = float('inf')
                 for action in env_actions:
-                    next_grid = current_grid.copy()
-                    next_grid.set_cell(action[0], action[1], config.CELL_WALL)
-                    next_state = {'robot_pos': current_pos, 'grid': next_grid}
+                    # Đặt tường tạm thời (Do)
+                    current_grid.set_cell(action[0], action[1], config.CELL_WALL)
+                    next_state = {'robot_pos': current_pos, 'grid': current_grid}
+
                     val = self._minimax(next_state, 1, True)
+
+                    # Khôi phục trạng thái cũ (Undo)
+                    current_grid.set_cell(action[0], action[1], config.CELL_EMPTY)
+
                     if val < best_env_val:
                         best_env_val = val
                         best_env_action = action
+
                 if best_env_action:
                     current_grid.set_cell(best_env_action[0], best_env_action[1], config.CELL_WALL)
-                    
+
         return path
 
     def _minimax(self, state, depth, is_maximizing):
-        """
-        Hàm đệ quy Minimax.
-        """
+        """Hàm đệ quy Minimax (Không copy grid)."""
         self.steps += 1
         pos = state['robot_pos']
         grid = state['grid']
-        
+
         if pos == self.problem.goal or depth >= self.max_depth:
             return self._evaluate(state)
-            
+
         if is_maximizing:
             actions = self._get_robot_actions(state)
             if not actions:
                 return -100.0
             max_val = -float('inf')
             for action in actions:
-                next_grid = grid.copy()
-                next_state = {'robot_pos': action, 'grid': next_grid}
+                next_state = {'robot_pos': action, 'grid': grid}
                 val = self._minimax(next_state, depth + 1, False)
                 max_val = max(max_val, val)
             return max_val
@@ -128,17 +124,17 @@ class Minimax(BaseAlgorithm):
                 return self._minimax(next_state, depth + 1, True)
             min_val = float('inf')
             for action in actions:
-                next_grid = grid.copy()
-                next_grid.set_cell(action[0], action[1], config.CELL_WALL)
-                next_state = {'robot_pos': pos, 'grid': next_grid}
+                # Kỹ thuật Backtracking: Đặt tường tạm thời -> Đệ quy -> Hoàn tác
+                grid.set_cell(action[0], action[1], config.CELL_WALL)
+                next_state = {'robot_pos': pos, 'grid': grid}
+
                 val = self._minimax(next_state, depth + 1, True)
+
+                grid.set_cell(action[0], action[1], config.CELL_EMPTY)
                 min_val = min(min_val, val)
             return min_val
 
     def _evaluate(self, state):
-        """
-        Hàm đánh giá trạng thái (utility function).
-        """
         pos = state['robot_pos']
         goal = self.problem.goal
         if pos == goal:
@@ -146,13 +142,11 @@ class Minimax(BaseAlgorithm):
         return -float(manhattan_distance(pos, goal))
 
     def _get_robot_actions(self, state):
-        """Lấy các hướng đi hợp lệ của robot."""
         pos = state['robot_pos']
         grid = state['grid']
         return grid.get_neighbors(pos[0], pos[1])
 
     def _get_env_actions(self, state):
-        """Lấy các vị trí môi trường có thể thêm vật cản."""
         r, c = state['robot_pos']
         grid = state['grid']
         candidates = []
@@ -165,4 +159,5 @@ class Minimax(BaseAlgorithm):
                     if grid.get_cell(nr, nc) == config.CELL_EMPTY and (nr, nc) != self.problem.goal:
                         candidates.append((nr, nc))
         candidates.sort(key=lambda p: manhattan_distance(p, (r, c)))
-        return candidates[:3]
+        # Thay thế hardcode bằng cấu hình hệ thống
+        return candidates[:config.ADVERSARIAL_NUM_OBSTACLES]
