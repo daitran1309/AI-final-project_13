@@ -38,17 +38,17 @@ class Colors:
     CURRENT_GLOW = (255, 170, 20, 120)
 
     # === Text ===
-    TEXT = (230, 225, 250)
-    TEXT_DIM = (150, 140, 180)
+    TEXT = (250, 250, 255)
+    TEXT_DIM = (180, 180, 200)
     TEXT_HIGHLIGHT = (255, 255, 255)
-    TEXT_ACCENT = (175, 155, 255)
+    TEXT_ACCENT = (200, 180, 255)
 
     # === Buttons ===
     BTN_NORMAL = (55, 48, 95)
     BTN_HOVER = (75, 65, 130)
     BTN_ACTIVE = (100, 75, 230)
     BTN_ACTIVE_GLOW = (130, 100, 255)
-    BTN_TEXT = (230, 225, 250)
+    BTN_TEXT = (255, 255, 255)
     BTN_RUN = (0, 220, 120)
     BTN_RUN_HOVER = (20, 255, 145)
     BTN_RESET = (220, 75, 95)

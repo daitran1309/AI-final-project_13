@@ -65,4 +65,4 @@ class SteepestHillClimbing(BaseAlgorithm):
             if self.problem.is_goal(best_neighbor):
                 return [n.position for n in current_node.trace_path()]
                 
-        return [n.position for n in current_node.trace_path()]
+        return []

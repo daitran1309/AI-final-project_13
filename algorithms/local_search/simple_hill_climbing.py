@@ -60,4 +60,4 @@ class SimpleHillClimbing(BaseAlgorithm):
             if self.problem.is_goal(current_node.position):
                 return [n.position for n in current_node.trace_path()]
                 
-        return [n.position for n in current_node.trace_path()]
+        return []

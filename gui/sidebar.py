@@ -1,49 +1,32 @@
 """
-Module sidebar: Panel điều khiển premium với header, legend, speed slider, metrics.
+Module sidebar: Bảng điều khiển với giao diện Clean & Modern Minimalist.
 """
 
 import pygame
-import math
 import config
-from gui.colors import Colors
-from gui.button import Button
+from gui.theme import UITheme
+from gui.components import Button, PillToggleGroup, draw_card
 
-
-# Mô tả ngắn cho từng nhóm thuật toán
-GROUP_DESCRIPTIONS = {
-    "Uninformed Search": "BFS, DFS, IDS — Duyệt không cần heuristic",
-    "Informed Search": "UCS, Greedy, A* — Dùng heuristic + chi phí",
-    "Local Search": "Hill Climbing, Beam — Tối ưu cục bộ",
-    "Complex Environments": "Belief state — Robot không biết vị trí",
-    "CSP": "Backtracking, FC, Min-Conflicts — Ràng buộc",
-    "Adversarial Search": "Minimax, Alpha-Beta, Expectimax — Đối kháng",
-}
-
-# Legend items
 LEGEND_ITEMS = [
-    ("Start", Colors.START),
-    ("Goal", Colors.GOAL),
-    ("Wall", Colors.CELL_WALL),
-    ("Weight", Colors.CELL_WEIGHT),
-    ("Forbidden", Colors.CELL_FORBIDDEN),
-    ("Visited", Colors.VISITED),
-    ("Path", Colors.PATH),
+    ("Bắt đầu", UITheme.START),
+    ("Đích", UITheme.GOAL),
+    ("Tường", UITheme.CELL_WALL),
+    ("Đầm lầy", UITheme.CELL_WEIGHT),
+    ("Vùng cấm", UITheme.CELL_FORBIDDEN),
+    ("Đã duyệt", UITheme.CELL_VISITED),
+    ("Đường đi", UITheme.CELL_PATH),
 ]
 
+DRAW_MODE_MAP = {
+    "Tường": "wall",
+    "Bắt Đầu": "start",
+    "Đích": "goal",
+    "Đầm Lầy": "weight",
+    "Cấm": "forbid",
+    "Xoá": "erase"
+}
 
 class Sidebar:
-    """
-    Sidebar premium:
-    - Header với tên nhóm + mô tả
-    - Chọn nhóm thuật toán
-    - Chọn thuật toán cụ thể
-    - Speed slider
-    - Nút Run / Reset
-    - Draw Mode
-    - Legend
-    - Metrics card đẹp
-    """
-
     def __init__(self, x, y, width, height):
         self.rect = pygame.Rect(x, y, width, height)
         self.x = x
@@ -51,322 +34,340 @@ class Sidebar:
         self.width = width
         self.height = height
 
-        # Trạng thái
         self.selected_group = None
         self.selected_algorithm = None
         self.draw_mode = "wall"
         self.animation_speed = config.ANIMATION_SPEED_DEFAULT
         self.metrics = None
-        self.metrics_history = []
-
-        self.scroll_y = 0
-
+        
         self.speed_min = config.ANIMATION_SPEED_MIN
         self.speed_max = config.ANIMATION_SPEED_MAX
         self.is_dragging_slider = False
 
-        self._create_buttons()
+        self._create_components()
 
-    def _create_buttons(self):
-        """Tạo tất cả các nút bấm với layout tối ưu."""
-        pad = 12
-        btn_w = self.width - 2 * pad
+    def _create_components(self):
+        """Khởi tạo các UI components."""
+        pad = UITheme.PADDING
+        inner_w = self.width - 2 * pad
         
-        # === Section 1: Nhóm thuật toán (2 cột) ===
-        self.group_buttons = []
-        group_btn_w = (btn_w - 6) // 2
-        group_btn_h = 26
-        y = self.y + 65
+        # 1. Action Buttons
+        # Chúng ta khởi tạo trước để có rect cố định khi vẽ
+        btn_w = (inner_w - 2 * pad - 10) // 3
+        y_actions = 0 # Sẽ được tính lại trong draw
+        self.btn_run = Button(0, 0, btn_w, UITheme.BTN_HEIGHT, "Chạy", style='filled', color=UITheme.BTN_RUN, font_size=14)
+        self.btn_reset = Button(0, 0, btn_w, UITheme.BTN_HEIGHT, "Làm Mới", style='outline', color=UITheme.BTN_RESET, font_size=14)
+        self.btn_random = Button(0, 0, btn_w, UITheme.BTN_HEIGHT, "Ngẫu Nhiên", style='outline', color=UITheme.BTN_RANDOM, font_size=14)
         
-        for i, group_name in enumerate(config.ALGORITHM_GROUPS):
-            row_idx = i // 2
-            col_idx = i % 2
-            bx = self.x + pad + col_idx * (group_btn_w + 6)
-            by = y + row_idx * (group_btn_h + 4)
-            btn = Button(bx, by, group_btn_w, group_btn_h, group_name, font_size=10)
-            self.group_buttons.append((group_name, btn))
-            
-        self.algo_buttons_y = y + 3 * (group_btn_h + 4) + 15
+        # 2. Draw Mode Pill
+        draw_options = list(DRAW_MODE_MAP.keys())
+        self.draw_mode_group = PillToggleGroup(0, 0, inner_w - 2 * pad, UITheme.BTN_HEIGHT, draw_options, font_size=11)
+        self.draw_mode_group.selected = "Tường"
+        
+        # 3. Algorithm Group Pills (2x3 grid)
+        # Sẽ được tạo ở _update_algo_buttons dựa trên config
+        self.group_options_1 = list(config.ALGORITHM_GROUPS.keys())[:3]
+        self.group_options_2 = list(config.ALGORITHM_GROUPS.keys())[3:]
+        self.group_pill_1 = PillToggleGroup(0, 0, inner_w - 2 * pad, 28, self.group_options_1, font_size=10)
+        self.group_pill_2 = PillToggleGroup(0, 0, inner_w - 2 * pad, 28, self.group_options_2, font_size=10)
+        
         self.algo_buttons = []
-
-        # === Section 2: Speed Slider & Run/Reset side-by-side ===
-        # Các nút điều khiển đặt cố định phía dưới
-        self.slider_y = self.height - 240
-        self.slider_rect = pygame.Rect(self.x + pad, self.slider_y + 18, btn_w, 8)
         
-        # Nút Run & Reset side-by-side
-        control_y = self.slider_y + 40
-        ctrl_btn_w = (btn_w - 6) // 2
-        self.btn_run = Button(
-            self.x + pad, control_y, ctrl_btn_w, 32,
-            "Run", font_size=12,
-            color=Colors.BTN_RUN, hover_color=Colors.BTN_RUN_HOVER,
-            icon="▶"
-        )
-        self.btn_reset = Button(
-            self.x + pad + ctrl_btn_w + 6, control_y, ctrl_btn_w, 32,
-            "Reset", font_size=12,
-            color=Colors.BTN_RESET, hover_color=Colors.BTN_RESET_HOVER,
-            icon="↻"
-        )
+        self.slider_rect = pygame.Rect(0, 0, inner_w - 2 * pad, 6)
 
-        # === Section 3: Draw Mode (3 cột) ===
-        draw_modes = [
-            ("Wall", "wall"), ("Start", "start"), ("Goal", "goal"),
-            ("Weight", "weight"), ("Forbid", "forbidden"), ("Erase", "erase")
-        ]
-        self.draw_mode_buttons = []
-        mode_btn_w = (btn_w - 8) // 3
-        mode_btn_h = 24
-        draw_y = control_y + 48
-        for i, (label, mode) in enumerate(draw_modes):
-            row_idx = i // 3
-            col_idx = i % 3
-            bx = self.x + pad + col_idx * (mode_btn_w + 4)
-            by = draw_y + row_idx * (mode_btn_h + 3)
-            btn = Button(bx, by, mode_btn_w, mode_btn_h, label, font_size=10)
-            self.draw_mode_buttons.append((mode, btn))
-
-    def update_algo_buttons(self):
-        """Cập nhật thuật toán khi đổi nhóm."""
+    def update_algo_buttons(self, y_offset=0):
+        """Tạo danh sách các nút chọn thuật toán."""
         self.algo_buttons = []
         if self.selected_group and self.selected_group in config.ALGORITHM_GROUPS:
-            pad = 12
-            btn_w = self.width - 2 * pad
-            btn_h = 26
-            y = self.algo_buttons_y
-
+            pad = UITheme.PADDING
+            inner_w = self.width - 2 * pad
+            btn_w = inner_w - 2 * pad
+            btn_h = 32
+            
             algos = config.ALGORITHM_GROUPS[self.selected_group]
             if self.selected_algorithm not in algos:
                 self.selected_algorithm = algos[0]
-
+                
             for algo_name in algos:
-                btn = Button(
-                    self.x + pad, y, btn_w, btn_h,
-                    algo_name, font_size=11
-                )
+                btn = Button(0, 0, btn_w, btn_h, algo_name, style='ghost', color=UITheme.PRIMARY, font_size=12)
                 self.algo_buttons.append((algo_name, btn))
-                y += btn_h + 4
+
+    def set_position(self, x, y, height):
+        self.x = x
+        self.y = y
+        self.rect.x = x
+        self.rect.y = y
+        self.height = height
 
     def draw(self, surface):
-        """Vẽ sidebar premium."""
-        # === Nền sidebar gradient ===
-        for y in range(self.height):
-            t = y / self.height
-            r = int(Colors.SIDEBAR_BG[0] + (Colors.SIDEBAR_ACCENT[0] - Colors.SIDEBAR_BG[0]) * t * 0.3)
-            g = int(Colors.SIDEBAR_BG[1] + (Colors.SIDEBAR_ACCENT[1] - Colors.SIDEBAR_BG[1]) * t * 0.3)
-            b = int(Colors.SIDEBAR_BG[2] + (Colors.SIDEBAR_ACCENT[2] - Colors.SIDEBAR_BG[2]) * t * 0.3)
-            pygame.draw.line(surface, (r, g, b), (self.x, y), (self.x + self.width, y))
+        # Background Sidebar
+        pygame.draw.rect(surface, UITheme.BG_LIGHT, self.rect)
+        # Border chia cách grid
+        pygame.draw.line(surface, UITheme.GRID_BORDER, (self.x, self.y), (self.x, self.y + self.height), 2)
+        
+        pad = UITheme.PADDING
+        inner_w = self.width - 2 * pad
+        current_y = self.y + pad
+        
+        # --- 1. Header Card ---
+        header_h = 50
+        header_rect = pygame.Rect(self.x + pad, current_y, inner_w, header_h)
+        draw_card(surface, header_rect)
+        self._draw_header_content(surface, header_rect)
+        current_y += header_h + 10
 
-        # Viền trái sáng
-        pygame.draw.line(surface, Colors.HEADER_ACCENT,
-                         (self.x, 0), (self.x, self.height), 2)
+        # --- 2. Algorithm Groups Card ---
+        group_h = 90
+        group_rect = pygame.Rect(self.x + pad, current_y, inner_w, group_h)
+        draw_card(surface, group_rect)
+        self._draw_section_title(surface, "NHÓM THUẬT TOÁN", group_rect.x + pad, group_rect.y + 10)
+        
+        self.group_pill_1.rect.topleft = (group_rect.x + pad, group_rect.y + 30)
+        self.group_pill_2.rect.topleft = (group_rect.x + pad, group_rect.y + 30 + 28 + 4)
+        
+        # Update selected in pills
+        if self.selected_group in self.group_options_1:
+            self.group_pill_1.selected = self.selected_group
+            self.group_pill_2.selected = None
+        else:
+            self.group_pill_2.selected = self.selected_group
+            self.group_pill_1.selected = None
+            
+        self.group_pill_1.draw(surface)
+        self.group_pill_2.draw(surface)
+        
+        current_y += group_h + 10
 
-        # === Header ===
-        self._draw_header(surface)
-        self._draw_section_label(surface, "Algorithm Groups", 50)
+        # --- 3. Select Algorithm Card ---
+        if self.algo_buttons:
+            algo_h = 36 + len(self.algo_buttons) * 36
+            algo_rect = pygame.Rect(self.x + pad, current_y, inner_w, algo_h)
+            draw_card(surface, algo_rect)
+            self._draw_section_title(surface, "CHỌN THUẬT TOÁN", algo_rect.x + pad, algo_rect.y + 10)
+            
+            by = algo_rect.y + 30
+            for algo_name, btn in self.algo_buttons:
+                btn.rect.topleft = (algo_rect.x + pad, by)
+                btn.is_active = (algo_name == self.selected_algorithm)
+                btn.draw(surface)
+                by += 36
+            current_y += algo_h + 10
 
-        # === Nhóm thuật toán ===
-        for group_name, btn in self.group_buttons:
-            btn.is_active = (group_name == self.selected_group)
-            btn.draw(surface)
+        # --- 4. Statistics Card ---
+        stat_h = 130
+        stat_rect = pygame.Rect(self.x + pad, current_y, inner_w, stat_h)
+        draw_card(surface, stat_rect)
+        self._draw_section_title(surface, "THỐNG KÊ THỜI GIAN THỰC", stat_rect.x + pad, stat_rect.y + 10)
+        self._draw_statistics(surface, stat_rect)
+        current_y += stat_h + 10
 
-        # === Thuật toán cụ thể ===
-        self._draw_section_label(surface, "Select Algorithm", self.algo_buttons_y - 14)
-        for algo_name, btn in self.algo_buttons:
-            btn.is_active = (algo_name == self.selected_algorithm)
-            btn.draw(surface)
-
-        # === Metrics ===
-        if self.metrics:
-            self._draw_metrics(surface)
-
-        # === Speed Slider ===
-        self._draw_speed_slider(surface)
-
-        # === Run / Reset ===
+        # --- 5 & 6. Controls & Actions Card ---
+        ctrl_h = 120
+        ctrl_rect = pygame.Rect(self.x + pad, current_y, inner_w, ctrl_h)
+        draw_card(surface, ctrl_rect)
+        self._draw_section_title(surface, "ĐIỀU KHIỂN & TỐC ĐỘ", ctrl_rect.x + pad, ctrl_rect.y + 10)
+        
+        self.slider_rect.topleft = (ctrl_rect.x + pad, ctrl_rect.y + 45)
+        self._draw_speed_slider(surface, self.slider_rect)
+        
+        act_y = ctrl_rect.y + 70
+        btn_w = (inner_w - 2 * pad - 10) // 3
+        
+        self.btn_run.rect.topleft = (ctrl_rect.x + pad, act_y)
+        self.btn_run.rect.width = btn_w
+        self.btn_reset.rect.topleft = (self.btn_run.rect.right + 5, act_y)
+        self.btn_reset.rect.width = btn_w
+        self.btn_random.rect.topleft = (self.btn_reset.rect.right + 5, act_y)
+        self.btn_random.rect.width = btn_w
+        
         self.btn_run.draw(surface)
         self.btn_reset.draw(surface)
+        self.btn_random.draw(surface)
+        
+        current_y += ctrl_h + 10
 
-        # === Draw Mode ===
-        self._draw_section_label(surface, "Draw Mode",
-                                 self.draw_mode_buttons[0][1].rect.y - 14)
-        for mode, btn in self.draw_mode_buttons:
-            btn.is_active = (mode == self.draw_mode)
-            btn.draw(surface)
+        # --- 7. Draw Mode Card ---
+        draw_h = 95
+        draw_rect = pygame.Rect(self.x + pad, current_y, inner_w, draw_h)
+        draw_card(surface, draw_rect)
+        self._draw_section_title(surface, "CÔNG CỤ VẼ BẢN ĐỒ", draw_rect.x + pad, draw_rect.y + 10)
+        self.draw_mode_group.rect.topleft = (draw_rect.x + pad, draw_rect.y + 25)
+        selected_vi = self.draw_mode_group.selected
+        self.draw_mode = DRAW_MODE_MAP[selected_vi] if selected_vi else "wall"
+        self.draw_mode_group.draw(surface)
+        
+        # Ghi chú trực quan cho người dùng
+        note_text = ""
+        if self.draw_mode == "wall": note_text = "* Tường cứng: Chướng ngại vật không thể đi qua."
+        elif self.draw_mode == "weight": note_text = "* Vùng lầy: Đi qua tốn x5 chi phí (chỉ A*/UCS biết né)."
+        elif self.draw_mode == "forbid": note_text = "* Vùng cấm: Khu vực giới hạn (dùng cho mô hình CSP)."
+        elif self.draw_mode == "start": note_text = "* Điểm bắt đầu: Vị trí xuất phát của Robot."
+        elif self.draw_mode == "goal": note_text = "* Đích đến: Vị trí gói hàng cần giao."
+        elif self.draw_mode == "erase": note_text = "* Cục tẩy: Click/Kéo chuột để xoá chướng ngại vật."
+        
+        font_note = UITheme.font(11, italic=True)
+        surf_note = font_note.render(note_text, True, UITheme.TEXT_MAIN)
+        surface.blit(surf_note, (draw_rect.x + pad, draw_rect.y + 70))
 
-        # === Legend ===
-        self._draw_legend(surface)
+        current_y += draw_h + 10
 
-    def _draw_header(self, surface):
-        """Vẽ header trên cùng sidebar."""
-        header_rect = pygame.Rect(self.x, 0, self.width, 42)
-        header_surf = pygame.Surface((self.width, 42), pygame.SRCALPHA)
-        pygame.draw.rect(header_surf, (*Colors.HEADER_BG, 220), header_surf.get_rect())
-        surface.blit(header_surf, (self.x, 0))
+        # --- 8. Legend ---
+        self._draw_legend(surface, self.x + pad, current_y, inner_w)
 
-        pygame.draw.line(surface, Colors.HEADER_ACCENT,
-                         (self.x + 12, 41), (self.x + self.width - 12, 41), 2)
+    def _draw_header_content(self, surface, rect):
+        """Vẽ title và icon robot đơn giản."""
+        # Icon robot (hình chữ nhật có mắt)
+        rx, ry = rect.x + 20, rect.y + 12
+        pygame.draw.rect(surface, UITheme.PRIMARY, (rx, ry, 24, 24), border_radius=6)
+        pygame.draw.rect(surface, UITheme.TEXT_WHITE, (rx + 4, ry + 6, 6, 6), border_radius=2)
+        pygame.draw.rect(surface, UITheme.TEXT_WHITE, (rx + 14, ry + 6, 6, 6), border_radius=2)
+        pygame.draw.rect(surface, UITheme.TEXT_WHITE, (rx + 6, ry + 16, 12, 4), border_radius=2)
+        
+        font = UITheme.font(16, bold=True)
+        title = font.render("Robot Giao Hàng", True, UITheme.TEXT_MAIN)
+        surface.blit(title, (rx + 35, ry - 2))
+        
+        font_sub = UITheme.font(11)
+        sub = font_sub.render("Mô phỏng Tìm đường AI", True, UITheme.TEXT_LIGHT)
+        surface.blit(sub, (rx + 35, ry + 16))
 
-        font = pygame.font.SysFont("Segoe UI", 15, bold=True)
-        title = font.render("🤖 AI Search Visualizer", True, Colors.TEXT_HIGHLIGHT)
-        surface.blit(title, (self.x + 12, 10))
+    def _draw_section_title(self, surface, text, x, y):
+        """Vẽ tiêu đề section (chữ HOA, letter-spacing nhỏ)."""
+        font = UITheme.font(10, bold=True)
+        # Pygame không có letter-spacing dễ, ta tự render từng chữ nếu cần, nhưng tạm dùng render thường
+        label = font.render(text, True, UITheme.TEXT_LIGHT)
+        surface.blit(label, (x, y))
 
-    def _draw_section_label(self, surface, text, y):
-        """Vẽ label cho section."""
-        font = pygame.font.SysFont("Segoe UI", 10, bold=True)
-        label = font.render(text.upper(), True, Colors.TEXT_ACCENT)
-        surface.blit(label, (self.x + 12, y))
+    def _draw_statistics(self, surface, rect):
+        """Vẽ Stats Card."""
+        font_label = UITheme.font(11, bold=True)
+        font_val = UITheme.font(12, bold=True)
+        
+        pad = UITheme.PADDING
+        x = rect.x + pad
+        y = rect.y + 30
+        
+        nodes = self.metrics.get('steps', 0) if self.metrics else 0
+        path_len = self.metrics.get('path_length', 0) if self.metrics else 0
+        time_ms = self.metrics.get('execution_time', 0)*1000 if self.metrics else 0
+        frontier = self.metrics.get('visited_count', 0) if self.metrics else 0
+        
+        stats = [
+            ("Số ô đã duyệt", str(nodes), UITheme.PRIMARY),
+            ("Độ dài đường đi", f"{path_len} ô", UITheme.CELL_PATH),
+            ("Thời gian chạy", f"{time_ms:.1f} ms", UITheme.START),
+            ("Ô chờ (Frontier)", str(frontier), UITheme.GOAL),
+        ]
+        
+        for lbl, val, color in stats:
+            # Thin colored left-border accent
+            accent_rect = pygame.Rect(x, y, 4, 14)
+            pygame.draw.rect(surface, color, accent_rect, border_radius=2)
+            
+            # Label
+            surf_lbl = font_label.render(lbl, True, UITheme.TEXT_MAIN)
+            surface.blit(surf_lbl, (x + 10, y))
+            
+            # Badge
+            surf_val = font_val.render(val, True, color)
+            val_rect = surf_val.get_rect()
+            
+            # Badge background (màu nhạt hơn)
+            badge_bg = (color[0], color[1], color[2], 30)
+            badge_surf = pygame.Surface((val_rect.width + 12, 20), pygame.SRCALPHA)
+            pygame.draw.rect(badge_surf, badge_bg, badge_surf.get_rect(), border_radius=10)
+            
+            bx = rect.right - pad - badge_surf.get_width()
+            by = y - 2
+            surface.blit(badge_surf, (bx, by))
+            surface.blit(surf_val, (bx + 6, by + 2))
+            
+            y += 24
 
-    def _draw_speed_slider(self, surface):
+    def _draw_speed_slider(self, surface, rect):
         """Vẽ speed slider."""
         # Label
-        font = pygame.font.SysFont("Segoe UI", 11)
-        speed_ms = self.animation_speed
-        label = font.render(f"Speed: {speed_ms}ms/step", True, Colors.TEXT_DIM)
-        surface.blit(label, (self.x + 12, self.slider_y))
-
+        font = UITheme.font(11, bold=True)
+        label_left = font.render("Chậm", True, UITheme.TEXT_LIGHT)
+        label_right = font.render("Nhanh", True, UITheme.TEXT_LIGHT)
+        
+        surface.blit(label_left, (rect.x, rect.y - 18))
+        surface.blit(label_right, (rect.right - label_right.get_width(), rect.y - 18))
+        
         # Track
-        pygame.draw.rect(surface, Colors.SLIDER_TRACK, self.slider_rect, border_radius=4)
-
-        # Fill (inverse - speed thấp = nhanh = fill nhiều)
-        t = 1.0 - (self.animation_speed - self.speed_min) / (self.speed_max - self.speed_min)
-        fill_width = int(self.slider_rect.width * t)
-        fill_rect = pygame.Rect(self.slider_rect.x, self.slider_rect.y,
-                                fill_width, self.slider_rect.height)
-        pygame.draw.rect(surface, Colors.SLIDER_FILL, fill_rect, border_radius=4)
-
+        pygame.draw.rect(surface, UITheme.BORDER, rect, border_radius=3)
+        
+        # Fill (tỉ lệ ngược: max_speed (500) là bên trái, min_speed (5) là bên phải)
+        t = 1.0 - (self.animation_speed - self.speed_min) / max(1, self.speed_max - self.speed_min)
+        fill_w = int(rect.width * t)
+        fill_rect = pygame.Rect(rect.x, rect.y, fill_w, rect.height)
+        pygame.draw.rect(surface, UITheme.PRIMARY, fill_rect, border_radius=3)
+        
         # Knob
-        knob_x = self.slider_rect.x + fill_width
-        knob_y = self.slider_rect.centery
-        pygame.draw.circle(surface, Colors.SLIDER_KNOB, (knob_x, knob_y), 7)
-        pygame.draw.circle(surface, Colors.TEXT_HIGHLIGHT, (knob_x, knob_y), 4)
+        knob_x = rect.x + fill_w
+        pygame.draw.circle(surface, UITheme.BG_WHITE, (knob_x, rect.centery), 8)
+        pygame.draw.circle(surface, UITheme.PRIMARY, (knob_x, rect.centery), 8, 2)
 
-    def _draw_metrics(self, surface):
-        """Vẽ metrics card đẹp."""
-        pad = 12
-        y = self.algo_buttons_y
-        if self.algo_buttons:
-            last_btn = self.algo_buttons[-1][1]
-            y = last_btn.rect.bottom + 12
-
-        # Card background
-        card_h = 145
-        card_rect = pygame.Rect(self.x + pad - 2, y, self.width - 2 * pad + 4, card_h)
-        card_surf = pygame.Surface((card_rect.width, card_rect.height), pygame.SRCALPHA)
-        pygame.draw.rect(card_surf, (*Colors.CARD_BG, 200), card_surf.get_rect(), border_radius=8)
-        pygame.draw.rect(card_surf, Colors.CARD_BORDER, card_surf.get_rect(), width=1, border_radius=8)
-        surface.blit(card_surf, card_rect.topleft)
-
-        # Card title
-        font_title = pygame.font.SysFont("Segoe UI", 12, bold=True)
-        font = pygame.font.SysFont("Segoe UI", 11)
-
-        title_text = font_title.render("📊 Results", True, Colors.TEXT_ACCENT)
-        surface.blit(title_text, (card_rect.x + 10, y + 8))
-        y += 28
-
-        # Found status
-        found = self.metrics.get('found', False)
-        status_text = "✓ Path Found" if found else "✗ No Path"
-        status_color = Colors.SUCCESS if found else Colors.FAILURE
-        status = font_title.render(status_text, True, status_color)
-        surface.blit(status, (card_rect.x + 10, y))
-        y += 20
-
-        # Metrics items
-        items = [
-            ("Algorithm", self.metrics.get('algorithm', 'N/A'), Colors.TEXT),
-            ("Path Length", str(self.metrics.get('path_length', 0)), Colors.PATH),
-            ("Expanded", str(self.metrics.get('steps', 0)), Colors.VISITED),
-            ("Visited", str(self.metrics.get('visited_count', 0)), Colors.FRONTIER),
-            ("Time", f"{self.metrics.get('execution_time', 0):.4f}s", Colors.TEXT_ACCENT),
-        ]
-
-        for label, value, color in items:
-            lbl = font.render(f"{label}:", True, Colors.TEXT_DIM)
-            val = font.render(value, True, color)
-            surface.blit(lbl, (card_rect.x + 10, y))
-            surface.blit(val, (card_rect.x + card_rect.width - 10 - val.get_width(), y))
-            y += 16
-
-    def _draw_legend(self, surface):
-        """Vẽ legend nhỏ phía dưới sidebar."""
-        pad = 12
-        # Đặt legend dưới draw mode
-        if not self.draw_mode_buttons:
-            return
-        last_btn = self.draw_mode_buttons[-1][1]
-        y = last_btn.rect.bottom + 8
-
-        font = pygame.font.SysFont("Segoe UI", 10)
-
-        # 2 cột
-        col_w = (self.width - 2 * pad) // 2
+    def _draw_legend(self, surface, x, y, width):
+        """Vẽ legend (ngang compact)."""
+        font = UITheme.font(11)
+        col_w = width // 3
+        
         for i, (label, color) in enumerate(LEGEND_ITEMS):
-            col_idx = i % 2
-            row_idx = i // 2
-            lx = self.x + pad + col_idx * col_w
-            ly = y + row_idx * 16
-
-            # Color swatch
-            swatch = pygame.Rect(lx, ly + 2, 10, 10)
-            pygame.draw.rect(surface, color, swatch, border_radius=2)
-
-            # Label
-            text = font.render(label, True, Colors.TEXT_DIM)
-            surface.blit(text, (lx + 14, ly))
+            r = i // 3
+            c = i % 3
+            cx = x + c * col_w
+            cy = y + r * 18
+            
+            pygame.draw.rect(surface, color, (cx, cy, 10, 10), border_radius=2)
+            pygame.draw.rect(surface, UITheme.BORDER, (cx, cy, 10, 10), width=1, border_radius=2)
+            
+            lbl_surf = font.render(label, True, UITheme.TEXT_MAIN)
+            surface.blit(lbl_surf, (cx + 16, cy - 2))
 
     def handle_event(self, event):
-        """Xử lý sự kiện."""
-        # Speed slider
+        # 1. Action buttons
+        if self.btn_run.handle_event(event): return {'type': 'run'}
+        if self.btn_reset.handle_event(event): return {'type': 'reset'}
+        if self.btn_random.handle_event(event): return {'type': 'random_maze'}
+        
+        # 2. Slider
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             if self.slider_rect.inflate(10, 20).collidepoint(event.pos):
                 self.is_dragging_slider = True
                 self._update_slider_value(event.pos[0])
                 return {'type': 'speed_change', 'speed': self.animation_speed}
-
-        if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+        elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
             self.is_dragging_slider = False
-
-        if event.type == pygame.MOUSEMOTION and self.is_dragging_slider:
+        elif event.type == pygame.MOUSEMOTION and self.is_dragging_slider:
             self._update_slider_value(event.pos[0])
             return {'type': 'speed_change', 'speed': self.animation_speed}
-
-        # Nhóm thuật toán
-        for group_name, btn in self.group_buttons:
-            if btn.handle_event(event):
-                self.selected_group = group_name
-                self.selected_algorithm = None
-                self.update_algo_buttons()
-                return {'type': 'select_group', 'group': group_name}
-
-        # Thuật toán
+            
+        # 3. Pill groups
+        if self.group_pill_1.handle_event(event):
+            self.selected_group = self.group_pill_1.selected
+            self.update_algo_buttons()
+            return {'type': 'select_group', 'group': self.selected_group}
+        if self.group_pill_2.handle_event(event):
+            self.selected_group = self.group_pill_2.selected
+            self.update_algo_buttons()
+            return {'type': 'select_group', 'group': self.selected_group}
+            
+        if self.draw_mode_group.handle_event(event):
+            self.draw_mode = self.draw_mode_group.selected.lower()
+            return {'type': 'draw_mode', 'mode': self.draw_mode}
+            
+        # 4. Algo buttons
         for algo_name, btn in self.algo_buttons:
             if btn.handle_event(event):
                 self.selected_algorithm = algo_name
                 return {'type': 'select_algorithm', 'algorithm': algo_name}
-
-        # Run
-        if self.btn_run.handle_event(event):
-            return {'type': 'run'}
-
-        # Reset
-        if self.btn_reset.handle_event(event):
-            return {'type': 'reset'}
-
-        # Draw mode
-        for mode, btn in self.draw_mode_buttons:
-            if btn.handle_event(event):
-                self.draw_mode = mode
-                return {'type': 'draw_mode', 'mode': mode}
-
+                
         return None
 
     def _update_slider_value(self, mouse_x):
-        """Cập nhật giá trị slider từ vị trí chuột."""
         t = (mouse_x - self.slider_rect.x) / self.slider_rect.width
         t = max(0, min(1, t))
-        # Inverse: kéo phải = nhanh = speed thấp
+        # Kéo phải (t=1) = Fast (speed thấp)
         self.animation_speed = int(self.speed_max - t * (self.speed_max - self.speed_min))
         self.animation_speed = max(self.speed_min, min(self.speed_max, self.animation_speed))

@@ -107,7 +107,7 @@ class Button:
                 surface.blit(ripple_surf, draw_rect.topleft)
 
         # --- Vẽ text ---
-        font = pygame.font.SysFont("Segoe UI", self.font_size)
+        font = pygame.font.SysFont("arial", self.font_size, bold=True)
         text_color = Colors.BTN_TEXT if self.is_enabled else Colors.TEXT_DIM
         if self.is_active:
             text_color = Colors.TEXT_HIGHLIGHT

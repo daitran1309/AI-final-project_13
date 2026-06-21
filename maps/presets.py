@@ -63,17 +63,19 @@ INFORMED_MAP = [
 # ============================================================
 LOCAL_SEARCH_MAP = [
     "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0",
-    "0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0",
-    "0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0",
-    "0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 0 0 0 0 0",
-    "S 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0",
-    "0 0 0 0 0 0 0 0 1 0 0 G 0 0 0 0 0 0 0 0",
-    "0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0",
-    "0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 0 0 0 0 0",
-    "0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0",
-    "0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0",
+    "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0",
+    "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0",
+    "0 0 0 0 0 0 1 1 1 1 1 0 0 0 0 0 0 0 0 0",
+    "0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0",
+    "0 0 S 0 0 0 1 0 0 0 0 0 0 G 0 0 0 0 0 0",
+    "0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0",
+    "0 0 0 0 0 0 1 1 1 1 1 0 0 0 0 0 0 0 0 0",
+    "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0",
+    "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0",
+    "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0",
     "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0",
 ]
+
 
 # ============================================================
 # Nhóm 4: COMPLEX ENVIRONMENTS (No Observation, Partially Observable)
@@ -132,16 +134,16 @@ ADVERSARIAL_MAP = [
 # MAPPING: Nhóm thuật toán → bản đồ tương ứng
 # ============================================================
 GROUP_MAPS = {
-    "Uninformed Search": UNINFORMED_MAP,
-    "Informed Search": INFORMED_MAP,
-    "Local Search": LOCAL_SEARCH_MAP,
-    "Complex Environments": COMPLEX_ENV_MAP,
-    "CSP": CSP_MAP,
-    "Adversarial Search": ADVERSARIAL_MAP,
+    "Tìm Kiếm Mù": UNINFORMED_MAP,
+    "Có Thông Tin": INFORMED_MAP,
+    "Tìm Cục Bộ": LOCAL_SEARCH_MAP,
+    "Môi Trường Ẩn": COMPLEX_ENV_MAP,
+    "Ràng Buộc CSP": CSP_MAP,
+    "Tìm Đối Kháng": ADVERSARIAL_MAP,
 }
 
 # Bản đồ mặc định khi mở ứng dụng
-DEFAULT_GROUP = "Uninformed Search"
+DEFAULT_GROUP = "Tìm Kiếm Mù"
 
 
 def parse_map_data(map_data):

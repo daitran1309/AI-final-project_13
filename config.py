@@ -5,10 +5,10 @@ Cấu hình toàn cục cho project Robot Giao Hàng.
 # ============================================================
 # CỬA SỔ & HIỂN THỊ
 # ============================================================
-WINDOW_WIDTH = 1200
-WINDOW_HEIGHT = 700
+WINDOW_WIDTH = 1300
+WINDOW_HEIGHT = 800
 FPS = 60
-TITLE = "Robot Giao Hàng - AI Search Algorithms"
+TITLE = "Delivery Robot Pathfinding"
 
 # ============================================================
 # GRID
@@ -45,19 +45,19 @@ ANIMATION_SPEED_MAX = 500
 # ============================================================
 # SIDEBAR
 # ============================================================
-SIDEBAR_WIDTH = 280
+SIDEBAR_WIDTH = 420
 SIDEBAR_X = WINDOW_WIDTH - SIDEBAR_WIDTH
 
 # ============================================================
 # NHÓM THUẬT TOÁN
 # ============================================================
 ALGORITHM_GROUPS = {
-    "Uninformed Search": ["BFS", "DFS", "IDS"],
-    "Informed Search": ["UCS", "Greedy", "A*"],
-    "Local Search": ["Simple Hill Climbing", "Steepest Hill Climbing", "Local Beam Search"],
-    "Complex Environments": ["No Observation (BFS/DFS)", "Partially Observable (Greedy)"],
-    "CSP": ["CSP Backtracking", "Forward Checking", "Min-Conflicts"],
-    "Adversarial Search": ["Minimax", "Alpha-Beta", "Expectimax"],
+    "Tìm Kiếm Mù": ["BFS", "DFS", "IDS"],
+    "Có Thông Tin": ["UCS", "Greedy", "A*"],
+    "Tìm Cục Bộ": ["Simple Hill Climbing", "Steepest Hill Climbing", "Local Beam Search"],
+    "Môi Trường Ẩn": ["No Observation (BFS)", "No Observation (DFS)", "Partially Observable (Greedy)"],
+    "Ràng Buộc CSP": ["CSP Backtracking", "Forward Checking", "Min-Conflicts"],
+    "Tìm Đối Kháng": ["Minimax", "Alpha-Beta", "Expectimax"],
 }
 
 # ============================================================

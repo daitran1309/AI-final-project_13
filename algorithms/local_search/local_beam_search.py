@@ -72,11 +72,12 @@ class LocalBeamSearch(BaseAlgorithm):
             successors.sort(key=lambda node: node.heuristic)
             next_beams = successors[:self.k]
             
-            best_curr_h = min(node.heuristic for node in beams)
-            best_next_h = next_beams[0].heuristic
-            
-            if best_next_h >= best_curr_h:
-                break
+            # best_curr_h = min(node.heuristic for node in beams)
+            # best_next_h = next_beams[0].heuristic
+            #
+            # Nếu giữ nguyên check này, Beam Search sẽ dừng khi h tăng (giống hệt Hill Climbing)
+            # if best_next_h >= best_curr_h:
+            #     break
                 
             beams = next_beams
             for node in beams:
