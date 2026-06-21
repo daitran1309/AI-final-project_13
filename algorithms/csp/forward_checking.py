@@ -38,6 +38,8 @@ class ForwardCheckingCSP(BaseAlgorithm):
         self.steps += 1
         
         def backtrack(current_path):
+            current_node = current_path[-1]
+
             if self.problem.is_goal(current_path[-1]):
                 return current_path
                 
@@ -51,7 +53,16 @@ class ForwardCheckingCSP(BaseAlgorithm):
             valid_neighbors = []
             for neighbor in neighbors:
                 if self._is_consistent(neighbor, current_path):
-                    valid_neighbors.append(neighbor)
+                    if self.problem.is_goal(neighbor):
+                        valid_neighbors.append(neighbor)
+                        continue
+                    future_path = current_path + [neighbor]
+                    future_neighbors = self.problem.grid.get_neighbors(neighbor[0], neighbor[1])
+                    has_future_domain = any(
+                        self._is_consistent(f_nb, future_path) for f_nb in future_neighbors
+                    )
+                    if has_future_domain:
+                        valid_neighbors.append(neighbor)
                     
             # Nếu không có nước đi tiếp theo hợp lệ nào (domain trống) → quay lui ngay (Prune)
             if not valid_neighbors:
