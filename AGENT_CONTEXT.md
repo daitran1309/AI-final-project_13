@@ -22,24 +22,28 @@ Dự án được chia thành các module độc lập:
   - `adversarial/`: Tìm kiếm đối kháng (Minimax, Alpha-beta, Expectimax).
   - `csp/`: Thỏa mãn ràng buộc (Backtracking, Forward Checking).
   - `complex_env/`: Môi trường phức tạp (Partially Observable).
-- **`gui/`**: Xử lý giao diện bằng Pygame. `App` là controller chính, `Renderer` lo việc vẽ lên màn hình, `Sidebar` chứa UI (nút bấm, combobox).
-- **`maps/`**: Xử lý logic tải bản đồ mẫu từ các file `txt`.
+- **`gui/`**: Xử lý giao diện bằng Pygame theo phong cách Clean & Modern Minimalist. `app.py` là controller chính, `renderer.py` lo việc vẽ lưới và hiệu ứng animation (fade-in, pulse), `sidebar.py` chứa toàn bộ UI dạng Card, `theme.py` định nghĩa màu sắc/font, và `components.py` chứa các widget dùng chung (Button, PillToggleGroup).
+- **`maps/`**: Quản lý bản đồ, chứa `presets.py` phân bổ map chuyên dụng cho từng nhóm thuật toán để minh hoạ trực quan điểm mạnh/yếu của chúng.
 - **`utils/`**: Các file tiện ích `helpers.py` và `metrics.py` (đo đạc thời gian, memory, số lượng node đã mở rộng).
 
 ## 3. Trạng thái hiện tại (Current State)
-- Đã thiết lập xong cấu trúc thư mục tiêu chuẩn.
-- Đã viết cơ bản phần giao diện Pygame (khung sidebar, khung vẽ bản đồ, các file chức năng UI như button, colors).
-- Đã chuẩn bị các file trống (hoặc file sườn) cho tất cả các thuật toán AI cần cài đặt.
-- Hệ thống cơ bản đã có thể khởi chạy qua lệnh `python main.py` nhưng logic chạy thuật toán bên trong chưa được tích hợp hoàn toàn với giao diện.
+- **Hoàn thiện 100% Logic Thuật Toán**: Đã tích hợp đầy đủ 6 nhóm thuật toán AI (Mù, Heuristic, Cục bộ, Môi trường ẩn, CSP, Đối kháng).
+- **Giao diện (UI/UX)**: Đã thiết kế lại toàn bộ UI theo phong cách **Clean & Modern Minimalist (Light Theme)**. Hỗ trợ responsive (co giãn lưới tự động), sử dụng hệ font Segoe UI sắc nét, Việt hoá 100%.
+- **Tính năng mở rộng**: 
+  - Animation mượt mà bằng cơ chế Queue (không block UI).
+  - Thống kê thông số (Thời gian, Độ dài đường đi, Bộ nhớ) theo thời gian thực (Real-time update) ngay trong lúc đang vẽ animation.
+  - Tích hợp công cụ vẽ bản đồ chuyên nghiệp (Tường, Đầm lầy, Vùng cấm, Điểm bắt đầu, Đích) kèm Tooltips (Ghi chú động) giải thích trực tiếp trên màn hình.
+  - Tính năng sinh Mê cung ngẫu nhiên (Random Maze).
 
 ## 4. Công việc tiếp theo (TODO / Roadmap)
-*(Lưu ý cho Agent: Nếu bạn làm xong mục nào, hãy đánh dấu `[x]` vào mục đó)*
+*(Tất cả công việc nền tảng đã hoàn tất)*
 
-- [ ] Cài đặt chi tiết logic của BaseAlgorithm và kết nối nó vào luồng của `gui/app.py`.
-- [ ] Xử lý thuật toán tìm kiếm mù (BFS, DFS, IDS): Trả về từng step để `gui/renderer.py` vẽ hiệu ứng animation thay vì chỉ vẽ kết quả cuối cùng.
-- [ ] Cài đặt hệ thống ghi nhận metrics (thời gian chạy, số node sinh ra, số bước đi) và hiển thị lên Sidebar khi thuật toán chạy xong.
-- [ ] Thêm logic tương tác cho phép người dùng dùng chuột vẽ chướng ngại vật (wall) và kéo thả điểm Start / Goal.
-- [ ] Hoàn thiện các nhóm thuật toán còn lại (Informed, Local Search, Adversarial...).
+- [x] Cài đặt chi tiết logic của BaseAlgorithm và kết nối nó vào luồng của `gui/app.py`.
+- [x] Xử lý thuật toán tìm kiếm mù (BFS, DFS, IDS): Trả về từng step để `gui/renderer.py` vẽ hiệu ứng animation thay vì chỉ vẽ kết quả cuối cùng.
+- [x] Cài đặt hệ thống ghi nhận metrics (thời gian chạy, số node sinh ra, số bước đi) và hiển thị lên Sidebar khi thuật toán chạy xong (đã nâng cấp thành Real-time).
+- [x] Thêm logic tương tác cho phép người dùng dùng chuột vẽ chướng ngại vật (wall) và kéo thả điểm Start / Goal.
+- [x] Hoàn thiện các nhóm thuật toán còn lại (Informed, Local Search, Adversarial...).
+- [x] Nâng cấp UI/UX: Light Theme, Việt hóa, Tooltips, Random Maze, Scale Grid.
 
 ## 5. Quy tắc dành cho Agent (AI Guidelines)
 1. **Tránh Block UI**: Vì dùng Pygame, các thuật toán không được phép dùng vòng lặp `while/for` chặn event loop. Khuyến khích sử dụng generator `yield` trạng thái ở mỗi bước lặp của thuật toán, hoặc chạy thuật toán ở luồng (thread) riêng để `app.py` update UI mượt mà.
