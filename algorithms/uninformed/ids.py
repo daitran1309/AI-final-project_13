@@ -29,7 +29,9 @@ class IDS(BaseAlgorithm):
             return []
             
         depth_limit = 0
-        while True:
+        max_depth = self.problem.grid.rows * self.problem.grid.cols
+
+        while depth_limit <= max_depth:
             result = self._depth_limited_search(depth_limit)
             if result != 'cutoff':
                 if result is None:
