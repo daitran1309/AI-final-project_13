@@ -62,7 +62,11 @@ class PartiallyObservableSearch(BaseAlgorithm):
         visited_beliefs = {initial_belief}
         found_actions = None
 
+        max_iterations = grid.rows * grid.cols * 100
+        
         while heap:
+            if self.steps >= max_iterations:
+                break
             _, _, (current_belief, actual_pos, action_path) = heapq.heappop(heap)
             self.steps += 1
             self.visited.append(actual_pos)
