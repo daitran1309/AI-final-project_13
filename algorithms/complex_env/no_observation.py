@@ -66,7 +66,11 @@ class NoObservationSearch(BaseAlgorithm):
         visited_beliefs = {initial_belief}
         found_actions = None
         
+        max_iterations = grid.rows * grid.cols * 100
+        
         while queue:
+            if self.steps >= max_iterations:
+                break
             self.steps += 1
             if self.method == "bfs":
                 current_belief, action_path = queue.popleft()
@@ -81,10 +85,7 @@ class NoObservationSearch(BaseAlgorithm):
                 next_belief = self._apply_action_to_belief(current_belief, action, grid)
                 if next_belief not in visited_beliefs:
                     visited_beliefs.add(next_belief)
-                    if self.method == "bfs":
-                        queue.append((next_belief, action_path + [action]))
-                    else:
-                        queue.append((next_belief, action_path + [action]))
+                    queue.append((next_belief, action_path + [action]))
                         
         if found_actions is None:
             return []
