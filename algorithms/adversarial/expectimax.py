@@ -15,17 +15,16 @@ Expectimax Algorithm - Thuật toán Expectimax.
     - Expectimax: đối thủ chọn NGẪU NHIÊN (realistic hơn).
 """
 
-from algorithms.base import BaseAlgorithm
-from utils.helpers import manhattan_distance
+from algorithms.adversarial.adversarial_base import AdversarialBase
 import config
+import random
 
 
-class Expectimax(BaseAlgorithm):
+class Expectimax(AdversarialBase):
     """Thuật toán Expectimax."""
 
     def __init__(self, problem, max_depth=None):
-        super().__init__(problem, name="Expectimax")
-        self.max_depth = max_depth or config.ADVERSARIAL_MAX_DEPTH
+        super().__init__(problem, name="Expectimax", max_depth=max_depth)
 
     def solve(self):
         """Chạy Expectimax."""
@@ -71,11 +70,12 @@ class Expectimax(BaseAlgorithm):
             state = {'robot_pos': current_pos, 'grid': current_grid}
             env_actions = self._get_env_actions(state)
             if env_actions:
-                import random
                 chosen_action = random.choice(env_actions)
                 current_grid.set_cell(chosen_action[0], chosen_action[1], config.CELL_WALL)
 
-        return path
+        if path[-1] == self.problem.goal:
+            return path
+        return []
 
     def _expectimax(self, state, depth, is_maximizing):
         """Hàm đệ quy Expectimax (Không copy grid)."""
@@ -112,31 +112,3 @@ class Expectimax(BaseAlgorithm):
                 grid.set_cell(action[0], action[1], config.CELL_EMPTY)
                 total_val += val
             return total_val / len(actions)
-
-    def _evaluate(self, state):
-        pos = state['robot_pos']
-        goal = self.problem.goal
-        if pos == goal:
-            return 100.0
-        return -float(manhattan_distance(pos, goal))
-
-    def _get_robot_actions(self, state):
-        pos = state['robot_pos']
-        grid = state['grid']
-        return grid.get_neighbors(pos[0], pos[1])
-
-    def _get_env_actions(self, state):
-        r, c = state['robot_pos']
-        grid = state['grid']
-        candidates = []
-        for dr in range(-2, 3):
-            for dc in range(-2, 3):
-                if dr == 0 and dc == 0:
-                    continue
-                nr, nc = r + dr, c + dc
-                if grid.in_bounds(nr, nc):
-                    if grid.get_cell(nr, nc) == config.CELL_EMPTY and (nr, nc) != self.problem.goal:
-                        candidates.append((nr, nc))
-        candidates.sort(key=lambda p: manhattan_distance(p, (r, c)))
-        # Thay thế hardcode bằng cấu hình hệ thống
-        return candidates[:config.ADVERSARIAL_NUM_OBSTACLES]
