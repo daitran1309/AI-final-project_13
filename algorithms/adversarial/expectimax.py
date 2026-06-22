@@ -13,6 +13,7 @@ Expectimax Algorithm - Thuật toán Expectimax.
     So sánh:
     - Minimax: đối thủ chọn nước đi TỆ NHẤT cho ta (pessimistic).
     - Expectimax: đối thủ chọn NGẪU NHIÊN (realistic hơn).
+    - Tường tạm thời + env cooldown để cân bằng.
 """
 
 from algorithms.adversarial.adversarial_base import AdversarialBase
@@ -36,9 +37,11 @@ class Expectimax(AdversarialBase):
 
         path = [current_pos]
         self.visited.append(current_pos)
+        visited_set = {current_pos}
 
-        limit = 100
+        limit = 200
         step = 0
+        stuck_count = 0
 
         while current_pos != self.problem.goal and step < limit:
             step += 1
@@ -53,6 +56,8 @@ class Expectimax(AdversarialBase):
             for action in robot_actions:
                 next_state = {'robot_pos': action, 'grid': current_grid}
                 val = self._expectimax(next_state, 1, False)
+                if action not in visited_set:
+                    val += 0.1
                 if val > best_val:
                     best_val = val
                     best_action = action
@@ -60,20 +65,35 @@ class Expectimax(AdversarialBase):
             if best_action is None:
                 break
 
+            prev_pos = current_pos
             current_pos = best_action
             path.append(current_pos)
             self.visited.append(current_pos)
+            visited_set.add(current_pos)
+
+            if current_pos == prev_pos:
+                stuck_count += 1
+                if stuck_count > 5:
+                    break
+            else:
+                stuck_count = 0
 
             if current_pos == self.problem.goal:
                 break
 
-            state = {'robot_pos': current_pos, 'grid': current_grid}
-            env_actions = self._get_env_actions(state)
-            if env_actions:
-                chosen_action = random.choice(env_actions)
-                current_grid.set_cell(chosen_action[0], chosen_action[1], config.CELL_WALL)
+            # Giảm lifetime tường tạm trước lượt env
+            self._decay_walls(current_grid)
 
-        if path[-1] == self.problem.goal:
+            # Env chỉ hành động mỗi 2 lượt (cooldown)
+            if step % 2 == 0:
+                state = {'robot_pos': current_pos, 'grid': current_grid}
+                env_actions = self._get_env_actions(state)
+                if env_actions:
+                    chosen_action = random.choice(env_actions)
+                    self._place_wall(current_grid, chosen_action)
+
+        # Trả path (có thể partial)
+        if len(path) > 1:
             return path
         return []
 
