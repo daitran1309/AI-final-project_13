@@ -16,9 +16,11 @@ Mô hình:
     - Goal test: belief state chỉ chứa goal position
 """
 
+import heapq
 from collections import deque
 from algorithms.base import BaseAlgorithm
 from core.grid import Grid
+from utils.helpers import manhattan_distance
 
 
 class NoObservationSearch(BaseAlgorithm):
@@ -58,24 +60,44 @@ class NoObservationSearch(BaseAlgorithm):
         
         actions = [(-1, 0), (1, 0), (0, -1), (0, 1)] # UP, DOWN, LEFT, RIGHT
         
+        # Tăng max_iterations đáng kể để đủ cho belief state space
+        max_iterations = 50000
+        
+        # Sử dụng heuristic-guided search (Greedy) để tìm nhanh hơn
+        # Heuristic: ưu tiên belief state nhỏ (ít vị trí khả dĩ hơn)
+        # + khoảng cách trung bình đến goal
+        counter = 0
+        h = self._belief_heuristic(initial_belief, goal_pos)
+        
         if self.method == "bfs":
-            queue = deque([(initial_belief, [])])
+            # BFS với heuristic (trở thành Greedy best-first search trên belief space)
+            heap = [(h, counter, (initial_belief, []))]
+            use_heap = True
         else:
+            # DFS vẫn dùng stack
             queue = [(initial_belief, [])]
+            use_heap = False
             
         visited_beliefs = {initial_belief}
         found_actions = None
         
-        max_iterations = grid.rows * grid.cols * 100
-        
-        while queue:
+        while (heap if use_heap else queue):
             if self.steps >= max_iterations:
                 break
             self.steps += 1
-            if self.method == "bfs":
-                current_belief, action_path = queue.popleft()
+            
+            if use_heap:
+                _, _, (current_belief, action_path) = heapq.heappop(heap)
             else:
                 current_belief, action_path = queue.pop()
+            
+            # Thêm một vị trí đại diện vào visited để GUI hiển thị animation
+            if current_belief:
+                # Chọn vị trí gần goal nhất trong belief để visualize
+                representative = min(current_belief, 
+                                     key=lambda p: manhattan_distance(p, goal_pos))
+                if representative not in set(self.visited):
+                    self.visited.append(representative)
                 
             if len(current_belief) == 1 and goal_pos in current_belief:
                 found_actions = action_path
@@ -85,7 +107,12 @@ class NoObservationSearch(BaseAlgorithm):
                 next_belief = self._apply_action_to_belief(current_belief, action, grid)
                 if next_belief not in visited_beliefs:
                     visited_beliefs.add(next_belief)
-                    queue.append((next_belief, action_path + [action]))
+                    if use_heap:
+                        counter += 1
+                        h_val = self._belief_heuristic(next_belief, goal_pos)
+                        heapq.heappush(heap, (h_val, counter, (next_belief, action_path + [action])))
+                    else:
+                        queue.append((next_belief, action_path + [action]))
                         
         if found_actions is None:
             return []
@@ -93,11 +120,9 @@ class NoObservationSearch(BaseAlgorithm):
         # Mô phỏng từ start để lấy tọa độ di chuyển
         coordinate_path = [start_pos]
         curr = start_pos
-        self.visited.append(curr)
         for act in found_actions:
             curr = self._apply_action(curr, act, grid)
             coordinate_path.append(curr)
-            self.visited.append(curr)
             
         return coordinate_path
 
@@ -118,3 +143,15 @@ class NoObservationSearch(BaseAlgorithm):
         Áp dụng action cho TẤT CẢ vị trí trong belief state.
         """
         return frozenset(self._apply_action(pos, action, grid) for pos in belief_state)
+
+    def _belief_heuristic(self, belief_state, goal):
+        """
+        Heuristic cho belief state:
+        Ưu tiên belief nhỏ hơn (ít vị trí → gần xác định được vị trí)
+        + min distance đến goal.
+        """
+        if not belief_state:
+            return float('inf')
+        # Kết hợp: kích thước belief state + khoảng cách tối thiểu đến goal
+        min_dist = min(manhattan_distance(pos, goal) for pos in belief_state)
+        return len(belief_state) * 2 + min_dist
