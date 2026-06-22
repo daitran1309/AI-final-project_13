@@ -38,6 +38,8 @@ class IDS(BaseAlgorithm):
                     return []
                 return result
             depth_limit += 1
+        
+        return []
 
     def _depth_limited_search(self, limit):
         """
