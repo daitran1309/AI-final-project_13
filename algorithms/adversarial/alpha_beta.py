@@ -8,6 +8,8 @@ Alpha-Beta Pruning - Cắt tỉa Alpha-Beta.
     - Nếu alpha >= beta → cắt tỉa (prune) nhánh đó.
     - Kết quả giống hệt Minimax nhưng nhanh hơn nhiều.
     - Best case: O(b^(d/2)) thay vì O(b^d).
+    - Tường tạm thời: biến mất sau N lượt để robot có cơ hội đến goal.
+    - Env chỉ hành động mỗi 2 lượt (cooldown) để cân bằng.
 """
 
 from algorithms.adversarial.adversarial_base import AdversarialBase
@@ -31,9 +33,11 @@ class AlphaBeta(AdversarialBase):
 
         path = [current_pos]
         self.visited.append(current_pos)
+        visited_set = {current_pos}  # Theo dõi vị trí đã đi qua
 
-        limit = 100
+        limit = 200
         step = 0
+        stuck_count = 0
 
         while current_pos != self.problem.goal and step < limit:
             step += 1
@@ -45,61 +49,73 @@ class AlphaBeta(AdversarialBase):
             best_action = None
             best_val = -float('inf')
 
-            # SỬA LỖI: Khởi tạo alpha/beta cho vòng lặp gốc của Robot (MAX)
+            # Khởi tạo alpha/beta cho vòng lặp gốc của Robot (MAX)
             alpha = -float('inf')
             beta = float('inf')
 
             for action in robot_actions:
                 next_state = {'robot_pos': action, 'grid': current_grid}
-                # Truyền giá trị alpha, beta thực tế đang cập nhật
                 val = self._alpha_beta(next_state, 1, alpha, beta, False)
+                # Ưu tiên ô chưa đi qua
+                if action not in visited_set:
+                    val += 0.1
                 if val > best_val:
                     best_val = val
                     best_action = action
-                # Cập nhật alpha ngay tại nút gốc để cắt tỉa các nhánh robot phía sau
                 alpha = max(alpha, best_val)
 
             if best_action is None:
                 break
 
+            prev_pos = current_pos
             current_pos = best_action
             path.append(current_pos)
             self.visited.append(current_pos)
+            visited_set.add(current_pos)
+
+            if current_pos == prev_pos:
+                stuck_count += 1
+                if stuck_count > 5:
+                    break
+            else:
+                stuck_count = 0
 
             if current_pos == self.problem.goal:
                 break
 
-            state = {'robot_pos': current_pos, 'grid': current_grid}
-            env_actions = self._get_env_actions(state)
+            # Giảm lifetime tường tạm trước lượt env
+            self._decay_walls(current_grid)
 
-            if env_actions:
-                best_env_action = None
-                best_env_val = float('inf')
+            # Env chỉ hành động mỗi 2 lượt (cooldown)
+            if step % 2 == 0:
+                state = {'robot_pos': current_pos, 'grid': current_grid}
+                env_actions = self._get_env_actions(state)
 
-                # SỬA LỖI: Khởi tạo alpha/beta cho vòng lặp gốc của Môi trường (MIN)
-                alpha = -float('inf')
-                beta = float('inf')
+                if env_actions:
+                    best_env_action = None
+                    best_env_val = float('inf')
 
-                for action in env_actions:
-                    # Kỹ thuật Backtracking thay thế cho .copy()
-                    current_grid.set_cell(action[0], action[1], config.CELL_WALL)
-                    next_state = {'robot_pos': current_pos, 'grid': current_grid}
+                    alpha = -float('inf')
+                    beta = float('inf')
 
-                    # Truyền giá trị alpha, beta thực tế đang cập nhật
-                    val = self._alpha_beta(next_state, 1, alpha, beta, True)
+                    for action in env_actions:
+                        current_grid.set_cell(action[0], action[1], config.CELL_WALL)
+                        next_state = {'robot_pos': current_pos, 'grid': current_grid}
 
-                    current_grid.set_cell(action[0], action[1], config.CELL_EMPTY)
+                        val = self._alpha_beta(next_state, 1, alpha, beta, True)
 
-                    if val < best_env_val:
-                        best_env_val = val
-                        best_env_action = action
-                    # Cập nhật beta ngay tại nút gốc để cắt tỉa các nhánh môi trường phía sau
-                    beta = min(beta, best_env_val)
+                        current_grid.set_cell(action[0], action[1], config.CELL_EMPTY)
 
-                if best_env_action:
-                    current_grid.set_cell(best_env_action[0], best_env_action[1], config.CELL_WALL)
+                        if val < best_env_val:
+                            best_env_val = val
+                            best_env_action = action
+                        beta = min(beta, best_env_val)
 
-        if path[-1] == self.problem.goal:
+                    if best_env_action:
+                        self._place_wall(current_grid, best_env_action)
+
+        # Trả path (có thể partial)
+        if len(path) > 1:
             return path
         return []
 
