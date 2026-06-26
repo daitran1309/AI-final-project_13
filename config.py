@@ -65,8 +65,8 @@ ALGORITHM_GROUPS = {
 # ============================================================
 ADVERSARIAL_MAX_DEPTH = 4        # Độ sâu tối đa cây game
 ADVERSARIAL_NUM_OBSTACLES = 1    # Số vật cản môi trường xét mỗi lượt
-ADVERSARIAL_MAX_WALLS = 6        # Tổng số tường tối đa env được đặt
-ADVERSARIAL_WALL_LIFETIME = 2    # Số lượt tường tồn tại trước khi biến mất
+ADVERSARIAL_MAX_WALLS = 10       # Tăng từ 6 lên 10 (môi trường được đặt nhiều tường hơn)
+ADVERSARIAL_WALL_LIFETIME = 4    # Tăng từ 2 lên 4 (tường tồn tại lâu hơn trước khi biến mất)
 
 # ============================================================
 # BELIEF STATE (Complex Environments)

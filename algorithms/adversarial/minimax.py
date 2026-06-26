@@ -45,6 +45,9 @@ class Minimax(AdversarialBase):
         step = 0
         stuck_count = 0  # Đếm số lần robot không tiến được
 
+        # Lưu trạng thái ban đầu
+        self.game_history.append([(r, c) for r, c, _ in self.temp_walls])
+
         while current_pos != self.problem.goal and step < limit:
             step += 1
             state = {'robot_pos': current_pos, 'grid': current_grid}
@@ -114,6 +117,9 @@ class Minimax(AdversarialBase):
 
                     if best_env_action:
                         self._place_wall(current_grid, best_env_action)
+
+            # Lưu lại trạng thái tường sau lượt này
+            self.game_history.append([(r, c) for r, c, _ in self.temp_walls])
 
         # Trả path (có thể partial)
         if len(path) > 1:

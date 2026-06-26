@@ -49,6 +49,15 @@ class Renderer:
         elif cell_type == config.CELL_FORBIDDEN:
             pygame.draw.rect(self.surface, UITheme.CELL_FORBIDDEN, rect)
             self._draw_cell_icon(rect, "✕", UITheme.GOAL)
+
+    def draw_temp_wall(self, row, col):
+        """Vẽ tường tạm thời của thuật toán đối kháng."""
+        x = self.offset_x + col * self.cell_size
+        y = self.offset_y + row * self.cell_size
+        rect = pygame.Rect(x + 1, y + 1, self.cell_size - 1, self.cell_size - 1)
+        pygame.draw.rect(self.surface, UITheme.CELL_WALL, rect)
+        pygame.draw.rect(self.surface, (220, 50, 50), rect, width=2)
+
     def _draw_cell_icon(self, rect, icon, color):
         font = UITheme.font(max(10, self.cell_size // 3))
         text = font.render(icon, True, color)

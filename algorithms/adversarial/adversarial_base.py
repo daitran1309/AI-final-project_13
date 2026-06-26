@@ -21,6 +21,7 @@ class AdversarialBase(BaseAlgorithm):
         self.wall_lifetime = config.ADVERSARIAL_WALL_LIFETIME  # Số lượt tường tồn tại
         # Danh sách tường tạm: [(row, col, remaining_turns), ...]
         self.temp_walls = []
+        self.game_history = []  # Lưu lịch sử vị trí tường qua mỗi bước
 
     def _evaluate(self, state):
         """Hàm đánh giá trạng thái: +100 nếu đến goal, ngược lại trả -Manhattan distance."""
@@ -57,8 +58,8 @@ class AdversarialBase(BaseAlgorithm):
                 if dr == 0 and dc == 0:
                     continue
                 dist = abs(dr) + abs(dc)
-                # Chỉ đặt tường ở distance > 2 (bảo vệ vùng gần robot)
-                if dist <= 2:
+                # Chỉ đặt tường ở distance > 1 (cho phép đặt sát robot hơn, giảm vùng an toàn)
+                if dist <= 1:
                     continue
                 nr, nc = r + dr, c + dc
                 if grid.in_bounds(nr, nc):
