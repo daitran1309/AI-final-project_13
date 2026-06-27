@@ -72,11 +72,11 @@ class BaseAlgorithm(ABC):
         """
         return {
             'algorithm': self.name,
-            'path_length': len(self.path),
+            'path_length': len(self.path) if self.path else 0,
             'steps': self.steps,
             'visited_count': len(self.visited),
             'execution_time': round(self.execution_time, 6),
-            'found': len(self.path) > 0,
+            'found': bool(self.path) and len(self.path) > 0,
         }
 
     def reset(self):
