@@ -201,10 +201,19 @@ class App:
         for r in range(self.grid.rows):
             for c in range(self.grid.cols):
                 if self.grid.cells[r][c] not in [config.CELL_START, config.CELL_GOAL]:
-                    if random.random() < 0.25:
-                        self.grid.set_cell(r, c, config.CELL_WALL)
-                    else:
-                        self.grid.set_cell(r, c, config.CELL_EMPTY)
+                    self.grid.set_cell(r, c, config.CELL_EMPTY)
+                    
+        # Khởi tạo các toà nhà 2x2 ngẫu nhiên cách nhau bởi đường phố
+        # Bắt đầu từ 2 và kết thúc ở cols-2 để chừa ít nhất 1 ô trống quanh viền map, tránh tạo ngõ cụt.
+        for r in range(2, self.grid.rows - 2, 3):
+            for c in range(2, self.grid.cols - 2, 4):
+                if random.random() < 0.7:  # 70% xác suất xây toà nhà tại vị trí này
+                    for dr in range(2):
+                        for dc in range(2):
+                            nr, nc = r + dr, c + dc
+                            if self.grid.in_bounds(nr, nc) and self.grid.cells[nr][nc] not in [config.CELL_START, config.CELL_GOAL]:
+                                self.grid.set_cell(nr, nc, config.CELL_WALL)
+                                
         self._clear_animation()
 
     def _run_algorithm(self):
