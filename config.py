@@ -66,7 +66,7 @@ ALGORITHM_GROUPS = {
 ADVERSARIAL_MAX_DEPTH = 4        # Độ sâu tối đa cây game
 ADVERSARIAL_NUM_OBSTACLES = 4    # Số vật cản môi trường xét mỗi lượt
 ADVERSARIAL_MAX_WALLS = 3        # Tối đa 3 kẹt xe cùng lúc trên bản đồ
-ADVERSARIAL_WALL_LIFETIME = 5    # Kẹt xe kéo dài 5 lượt mới tan
+ADVERSARIAL_WALL_LIFETIME = 5    # Kẹt xe kéo dài 5 lượt mới tan (để robot không bị kẹt chết)
 
 # ============================================================
 # BELIEF STATE (Complex Environments)
