@@ -10,6 +10,7 @@ from core.grid import Grid
 from core.problem import Problem
 from gui.renderer import Renderer
 from gui.sidebar import Sidebar
+from gui.benchmark import BenchmarkUI
 from gui.theme import UITheme
 from maps.presets import load_preset, DEFAULT_GROUP
 
@@ -66,6 +67,12 @@ class App:
         self.grid = load_preset(self.current_group)
 
         self.renderer = Renderer(self.screen)
+        self.benchmark_ui = BenchmarkUI(self.screen)
+        
+        # Trạng thái so sánh
+        self.show_benchmark = False
+        self.benchmark_results = []
+        
         self.sidebar = Sidebar(config.WINDOW_WIDTH - config.SIDEBAR_WIDTH, 0, config.SIDEBAR_WIDTH, config.WINDOW_HEIGHT)
         self.sidebar.selected_group = self.current_group
         self.sidebar.update_algo_buttons()
@@ -97,8 +104,22 @@ class App:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
-                return
-                
+
+            # Đóng popup benchmark nếu đang mở
+            if self.show_benchmark:
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                    self.show_benchmark = False
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    if event.button == 1 and self.benchmark_ui.close_rect.collidepoint(event.pos):
+                        self.show_benchmark = False
+                    elif event.button == 4: # Scroll up
+                        self.benchmark_ui.scroll_y = max(0, self.benchmark_ui.scroll_y - 40)
+                    elif event.button == 5: # Scroll down
+                        # Tối đa scroll là số lượng item * 30 trừ đi chiều cao vùng hiển thị
+                        max_scroll = max(0, len(self.benchmark_results) * 30 - 250)
+                        self.benchmark_ui.scroll_y = min(max_scroll, self.benchmark_ui.scroll_y + 40)
+                continue
+
             if event.type == pygame.VIDEORESIZE:
                 self._update_layout(event.w, event.h)
                 continue
@@ -145,6 +166,8 @@ class App:
     def _handle_sidebar_action(self, action):
         if action['type'] == 'run':
             self._run_algorithm()
+        elif action['type'] == 'benchmark':
+            self._run_benchmark()
         elif action['type'] == 'reset':
             self._reset()
         elif action['type'] == 'random_maze':
@@ -218,6 +241,30 @@ class App:
             self.last_animation_time = pygame.time.get_ticks()
         else:
             self.sidebar.metrics = self.final_metrics
+
+    def _run_benchmark(self):
+        if self.grid.start is None or self.grid.goal is None: return
+
+        problem = Problem(self.grid)
+        if not problem.is_valid(): return
+
+        self._clear_animation()
+        self.benchmark_results = []
+        # Lấy danh sách TOÀN BỘ thuật toán của TẤT CẢ các nhóm
+        
+        for group_name, group_algos in config.ALGORITHM_GROUPS.items():
+            for algo_name in group_algos:
+                algo_class = ALGORITHM_MAP.get(algo_name)
+                if algo_class:
+                    # Dùng bản sao của problem/grid để tránh thuật toán sửa trực tiếp
+                    prob_copy = Problem(self.grid.copy())
+                    algo = algo_class(prob_copy)
+                    algo.run()
+                    metrics = algo.get_metrics()
+                    metrics['group'] = group_name
+                    self.benchmark_results.append(metrics)
+                
+        self.show_benchmark = True
 
     def _load_group_map(self, group_name):
         self.current_group = group_name
@@ -311,6 +358,10 @@ class App:
         
         # 5. Sidebar
         self.sidebar.draw(self.screen)
+
+        # 6. Benchmark Modal Overlay (Nếu bật)
+        if self.show_benchmark:
+            self.benchmark_ui.draw(self.benchmark_results)
 
         pygame.display.flip()
 

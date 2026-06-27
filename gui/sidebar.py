@@ -58,6 +58,7 @@ class Sidebar:
         self.btn_run = Button(0, 0, btn_w, UITheme.BTN_HEIGHT, "Chạy", style='filled', color=UITheme.BTN_RUN, font_size=14)
         self.btn_reset = Button(0, 0, btn_w, UITheme.BTN_HEIGHT, "Làm Mới", style='outline', color=UITheme.BTN_RESET, font_size=14)
         self.btn_random = Button(0, 0, btn_w, UITheme.BTN_HEIGHT, "Ngẫu Nhiên", style='outline', color=UITheme.BTN_RANDOM, font_size=14)
+        self.btn_benchmark = Button(0, 0, inner_w - 2 * pad, UITheme.BTN_HEIGHT, "So Sánh Tất Cả", style='filled', color=UITheme.BTN_BENCHMARK, font_size=14)
         
         # 2. Draw Mode Pill
         draw_options = list(DRAW_MODE_MAP.keys())
@@ -162,7 +163,7 @@ class Sidebar:
         current_y += stat_h + 10
 
         # --- 5 & 6. Controls & Actions Card ---
-        ctrl_h = 120
+        ctrl_h = 160 # Tăng chiều cao để chứa thêm nút So Sánh
         ctrl_rect = pygame.Rect(self.x + pad, current_y, inner_w, ctrl_h)
         draw_card(surface, ctrl_rect)
         self._draw_section_title(surface, "ĐIỀU KHIỂN & TỐC ĐỘ", ctrl_rect.x + pad, ctrl_rect.y + 10)
@@ -180,9 +181,14 @@ class Sidebar:
         self.btn_random.rect.topleft = (self.btn_reset.rect.right + 5, act_y)
         self.btn_random.rect.width = btn_w
         
+        bench_y = act_y + 40
+        self.btn_benchmark.rect.topleft = (ctrl_rect.x + pad, bench_y)
+        self.btn_benchmark.rect.width = inner_w - 2 * pad
+        
         self.btn_run.draw(surface)
         self.btn_reset.draw(surface)
         self.btn_random.draw(surface)
+        self.btn_benchmark.draw(surface)
         
         current_y += ctrl_h + 10
 
@@ -330,6 +336,7 @@ class Sidebar:
         if self.btn_run.handle_event(event): return {'type': 'run'}
         if self.btn_reset.handle_event(event): return {'type': 'reset'}
         if self.btn_random.handle_event(event): return {'type': 'random_maze'}
+        if self.btn_benchmark.handle_event(event): return {'type': 'benchmark'}
         
         # 2. Slider
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:

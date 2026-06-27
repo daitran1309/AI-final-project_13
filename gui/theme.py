@@ -31,9 +31,10 @@ class UITheme:
     
     SHADOW = (224, 228, 237)        # #E0E4ED
 
-    BTN_RUN = (0, 200, 150)         # Green
-    BTN_RESET = (255, 107, 107)     # Red
-    BTN_RANDOM = (74, 144, 217)     # Blue
+    BTN_RUN = (46, 204, 113)
+    BTN_RESET = (231, 76, 60)
+    BTN_RANDOM = (52, 152, 219)
+    BTN_BENCHMARK = (155, 89, 182)
 
     # === Dimensions ===
     CARD_RADIUS = 12
