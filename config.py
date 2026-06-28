@@ -71,7 +71,7 @@ ADVERSARIAL_WALL_LIFETIME = 5    # Kẹt xe kéo dài 5 lượt mới tan (để
 # ============================================================
 # BELIEF STATE (Complex Environments)
 # ============================================================
-SENSOR_RANGE = 2                 # Tầm cảm biến (partially observable)
+SENSOR_RANGE = 1                 # Tầm cảm biến (partially observable)
 
 # ============================================================
 # CSP
