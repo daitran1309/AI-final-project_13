@@ -194,16 +194,12 @@ class MinConflicts(BaseAlgorithm):
         """
         queue = deque([(start, [start])])
         visited = {start}
-        max_steps = config.CSP_MAX_STEPS
         
         while queue:
             pos, path = queue.popleft()
             
             if pos == goal:
                 return path
-                
-            if len(path) > max_steps:
-                continue
                 
             neighbors = self.problem.grid.get_neighbors(pos[0], pos[1])
             # Lọc forbidden zones

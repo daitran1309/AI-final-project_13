@@ -60,15 +60,24 @@ class Renderer:
         pygame.draw.rect(hover_surf, (0, 0, 0, 10), hover_surf.get_rect())
         self.surface.blit(hover_surf, (x, y))
     def draw_visited(self, visited_list, count):
-        """Vẽ visited cells với hiệu ứng fade-in."""
+        """Vẽ visited cells với hiệu ứng fade-in, hỗ trợ xóa khi backtrack."""
+        active_cells = {}
         for i in range(count):
-            row, col = visited_list[i]
-            # Loại bỏ các vị trí trùng với wall, start, goal cho đẹp
-            # Nhưng để đơn giản, vẽ đè lên
+            item = visited_list[i]
+            if len(item) == 3 and item[2] == 'remove':
+                pos = (item[0], item[1])
+                if pos in active_cells:
+                    del active_cells[pos]
+            else:
+                pos = (item[0], item[1])
+                active_cells[pos] = i
+
+        for pos, add_idx in active_cells.items():
+            row, col = pos
             x = self.offset_x + col * self.cell_size + 1
             y = self.offset_y + row * self.cell_size + 1
             rect = pygame.Rect(x, y, self.cell_size - 1, self.cell_size - 1)
-            age = count - i
+            age = count - add_idx
             fade_duration_ms = 150.0
             time_lived = age * self.animation_speed
             t = min(1.0, time_lived / fade_duration_ms)

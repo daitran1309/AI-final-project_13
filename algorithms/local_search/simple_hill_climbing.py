@@ -5,7 +5,7 @@ Simple Hill Climbing - Leo đồi đơn giản.
     - Chọn neighbor ĐẦU TIÊN tốt hơn trạng thái hiện tại.
     - Không so sánh tất cả neighbors, chọn ngay khi tìm được cải thiện.
     - Có thể bị kẹt ở local minimum.
-    - Hàm đánh giá: h(n) = Manhattan distance đến goal (càng nhỏ càng tốt).
+
     - Cho phép sideways move (đi ngang khi h bằng nhau) để vượt plateau.
 """
 

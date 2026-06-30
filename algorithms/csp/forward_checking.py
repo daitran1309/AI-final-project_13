@@ -29,9 +29,6 @@ class ForwardCheckingCSP(BaseAlgorithm):
             return []
             
         start_pos = self.problem.start
-        max_steps = self.problem.get_max_steps()
-        if max_steps == float('inf'):
-            max_steps = config.CSP_MAX_STEPS
             
         path = [start_pos]
         path_set = {start_pos}
@@ -41,9 +38,6 @@ class ForwardCheckingCSP(BaseAlgorithm):
         def backtrack():
             if self.problem.is_goal(path[-1]):
                 return list(path)
-                
-            if len(path) > max_steps:
-                return None
                 
             last_pos = path[-1]
             neighbors = self.problem.grid.get_neighbors(last_pos[0], last_pos[1])
@@ -79,6 +73,7 @@ class ForwardCheckingCSP(BaseAlgorithm):
                     return res
                 path.pop()
                 path_set.discard(neighbor)
+                self.visited.append((neighbor[0], neighbor[1], 'remove'))
             return None
             
         res = backtrack()
